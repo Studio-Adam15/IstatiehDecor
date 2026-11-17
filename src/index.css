@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --burgundy: #4A101B;
+    --dark-wine: #2A0B10;
+    --warm-cream: #F5EFE4;
+    --soft-ivory: #FFFDF8;
+    --antique-gold: #B6975B;
+    --muted-taupe: #A89A8A;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: #2A0B10;
+    color: #F5EFE4;
+  }
+
+  body {
+    background-color: #2A0B10;
+    color: #F5EFE4;
+    overflow-x: hidden;
+  }
+
+  /* Typography utilities */
+  .font-serif-luxury {
+    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  }
+
+  .font-arabic-luxury {
+    font-family: 'Alexandria', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  }
+
+  .font-sans-editorial {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom luxury scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2A0B10;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B6975B;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4b476;
+}
+
+/* Image zoom & fine mask transitions */
+.curtain-flow {
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+}
+
+/* Subtle gold foil hairline border */
+.gold-border {
+  border-color: rgba(182, 151, 91, 0.35);
+}
+
+.gold-gradient-line {
+  background: linear-gradient(90deg, transparent, #B6975B, transparent);
+}
