@@ -132,10 +132,16 @@ export const CurtainsPage: React.FC<CurtainsPageProps> = ({ language, onNavigate
 
             <a
               href={BUSINESS_CONFIG.telUrl}
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-[#B6975B]/50 text-[#F5EFE4] font-arabic-luxury text-xs font-bold hover:border-[#B6975B] transition-colors"
+              className="inline-flex items-center gap-2 min-h-[44px] px-6 py-3.5 rounded-xl border border-[#B6975B]/50 text-[#F5EFE4] font-arabic-luxury text-xs font-bold hover:border-[#B6975B] transition-colors"
             >
-              <Phone className="w-4 h-4 text-[#B6975B]" />
-              <span className="dir-ltr">{BUSINESS_CONFIG.phone}</span>
+              <Phone className="w-4 h-4 text-[#B6975B] shrink-0" aria-hidden="true" />
+              <span
+                dir="ltr"
+                style={{ unicodeBidi: 'isolate' }}
+                className="font-mono tabular-nums inline-block"
+              >
+                {BUSINESS_CONFIG.phoneDisplay}
+              </span>
             </a>
           </div>
         </div>

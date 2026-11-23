@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone, MessageCircle, Globe, Menu, X } from 'lucide-react';
 import { Language, PageView } from '../types';
 import { BUSINESS_CONFIG } from '../data/istatiehData';
@@ -9,7 +9,6 @@ interface NavbarProps {
   setLanguage: (lang: Language) => void;
   activePage: PageView;
   setActivePage: (page: PageView) => void;
-  onNavigateSection?: (sectionId: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,10 +16,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   setLanguage,
   activePage,
   setActivePage,
-  onNavigateSection,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuToggleRef = useRef<HTMLButtonElement | null>(null);
+  const firstMobileLinkRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,7 +30,26 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Exact 6 links as specified in prompt:
+  // Keyboard Escape close + focus management for mobile drawer
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+        requestAnimationFrame(() => menuToggleRef.current?.focus());
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    requestAnimationFrame(() => firstMobileLinkRef.current?.focus());
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
+  // Exact 6 links:
   // الرئيسية | من نحن | ورق الجدران | الستائر | معرض التصاميم | تواصل معنا
   const navItems = [
     { id: 'home', sectionId: 'hero', labelAr: 'الرئيسية', labelEn: 'Home' },
@@ -69,70 +88,77 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-[#FFFDF8]/98 backdrop-blur-md border-b border-[#B6975B]/25 py-2.5 sm:py-3 shadow-md shadow-black/5'
-          : 'bg-[#FFFDF8]/92 backdrop-blur-sm border-b border-[#B6975B]/15 py-3.5 sm:py-4'
+        isScrolled ? 'glass-bar-scrolled py-2 sm:py-2.5' : 'glass-bar py-2.5 sm:py-3.5'
       }`}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        
-        {/* Brand Logo Zone:
-            - Positioned right in Arabic (RTL)
-            - Positioned left in English (LTR)
-            - Zero frames, badges, or artificial borders */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
+        {/* Brand Logo Zone: right in RTL, left in LTR */}
         <button
+          type="button"
           onClick={() => {
+            setMobileMenuOpen(false);
             setActivePage('home');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="flex items-center focus:outline-hidden group cursor-pointer shrink-0"
-          aria-label="Istatieh Decor — استيتية للديكور والستائر"
+          className="flex items-center rounded-lg py-1 px-1 group cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-[#B6975B]"
+          aria-label={language === 'ar' ? 'استيتيه للديكور والستائر — الصفحة الرئيسية' : 'Istatieh Decor — Home'}
         >
           <IstatiehLogo tone="light-surface" size="sm" />
         </button>
 
-        {/* Desktop Nav Items (Centered with balanced luxury spacing) */}
-        <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-xs font-arabic-luxury tracking-wide">
+        {/* Desktop Nav Items */}
+        <nav
+          aria-label={language === 'ar' ? 'التنقل الرئيسي' : 'Primary Navigation'}
+          className="hidden lg:flex items-center gap-5 xl:gap-7 text-xs font-arabic-luxury ltr:tracking-wide rtl:tracking-normal min-w-0"
+        >
           {navItems.map((item) => {
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => handleNavClick(item)}
-                className="relative py-1 text-[#2A0B10]/85 hover:text-[#4A101B] font-medium transition-colors duration-200 cursor-pointer group"
+                className="relative py-2 px-1.5 whitespace-nowrap shrink-0 text-[#2A0B10]/90 hover:text-[#4A101B] font-medium transition-colors duration-200 cursor-pointer group rounded-md focus-visible:ring-2 focus-visible:ring-[#B6975B]"
               >
-                <span className="group-hover:text-[#B6975B] transition-colors">
+                <span className="group-hover:text-[#9c7b3c] transition-colors">
                   {language === 'ar' ? item.labelAr : item.labelEn}
                 </span>
-                <span className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-[#B6975B] scale-x-0 group-hover:scale-x-100 transition-transform origin-center duration-300" />
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-0.5 left-0 right-0 h-[1.5px] bg-[#B6975B] scale-x-0 group-hover:scale-x-100 transition-transform origin-center duration-300"
+                />
               </button>
             );
           })}
         </nav>
 
-        {/* Action Controls: Language Switcher, Phone & Discreet Contact Button (Opposite side) */}
-        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-          
-          {/* Language Switcher */}
+        {/* Action Controls: Language Switcher, Phone & Discreet Contact Button */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Language Switcher (Liquid Glass Chip) */}
           <button
+            type="button"
             onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full border border-[#B6975B]/40 hover:border-[#B6975B] text-[#4A101B] hover:text-[#2A0B10] text-xs font-sans-editorial transition-all bg-[#F5EFE4]/60 hover:bg-[#F5EFE4] cursor-pointer"
-            title="Toggle Language / تغيير اللغة"
-            aria-label="Toggle Language"
+            className="glass-chip-light inline-flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-[40px] px-2.5 sm:px-3 py-1.5 rounded-full hover:border-[#B6975B] text-[#4A101B] hover:text-[#2A0B10] text-xs font-sans-editorial transition-all cursor-pointer whitespace-nowrap shrink-0"
+            title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+            aria-label={language === 'ar' ? 'Switch language to English' : 'تغيير اللغة إلى العربية'}
           >
-            <Globe className="w-3.5 h-3.5 text-[#B6975B]" />
-            <span className="font-semibold text-[11px] sm:text-xs">
+            <Globe className="w-3.5 h-3.5 text-[#9c7b3c] shrink-0" aria-hidden="true" />
+            <span className="font-semibold text-[11px] sm:text-xs whitespace-nowrap">
               {language === 'ar' ? 'EN' : 'العربية'}
             </span>
           </button>
 
-          {/* Quick Call Button (Desktop) */}
+          {/* Quick Call Button (Glass Chip) */}
           <a
             href={BUSINESS_CONFIG.telUrl}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#B6975B]/30 hover:border-[#B6975B] text-[#4A101B] text-xs transition-colors hover:text-[#B6975B]"
-            title="Call Istatieh Decor"
+            className="glass-chip-light hidden sm:inline-flex items-center gap-1.5 min-h-[40px] px-3.5 py-1.5 rounded-full hover:border-[#B6975B] text-[#4A101B] text-xs transition-all hover:text-[#2A0B10] whitespace-nowrap shrink-0"
+            title={language === 'ar' ? 'اتصال مباشر' : 'Call Istatieh Decor'}
           >
-            <Phone className="w-3.5 h-3.5 text-[#B6975B]" />
-            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="font-mono text-xs tabular-nums font-semibold">
+            <Phone className="w-3.5 h-3.5 text-[#9c7b3c] shrink-0" aria-hidden="true" />
+            <span
+              dir="ltr"
+              style={{ unicodeBidi: 'isolate' }}
+              className="font-mono text-xs tabular-nums font-semibold whitespace-nowrap"
+            >
               {BUSINESS_CONFIG.phoneDisplay}
             </span>
           </a>
@@ -142,48 +168,60 @@ export const Navbar: React.FC<NavbarProps> = ({
             href={BUSINESS_CONFIG.getWhatsAppUrl(language, 'general')}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#4A101B] hover:bg-[#5e1523] text-[#FFFDF8] text-xs font-arabic-luxury font-bold transition-all duration-200 shadow-sm active:scale-95"
-            title="WhatsApp Consultation"
+            className="inline-flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-[40px] px-3 sm:px-4 py-1.5 rounded-xl bg-[#4A101B]/95 hover:bg-[#5e1523] backdrop-blur-md text-[#FFFDF8] text-xs font-arabic-luxury font-bold transition-all duration-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_6px_16px_rgba(42,11,16,0.2)] active:scale-95 whitespace-nowrap shrink-0 border border-[#B6975B]/30"
+            title={language === 'ar' ? 'تواصل عبر واتساب' : 'WhatsApp Consultation'}
+            aria-label={language === 'ar' ? 'تواصل عبر واتساب' : 'WhatsApp Consultation'}
           >
-            <MessageCircle className="w-3.5 h-3.5 text-[#25D366] fill-[#25D366]/20" />
-            <span className="hidden sm:inline">
+            <MessageCircle className="w-3.5 h-3.5 text-[#25D366] fill-[#25D366]/20 shrink-0" aria-hidden="true" />
+            <span className="hidden sm:inline whitespace-nowrap">
               {language === 'ar' ? 'واتساب' : 'WhatsApp'}
             </span>
           </a>
 
           {/* Mobile Menu Toggle Button */}
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-1.5 rounded-lg text-[#4A101B] hover:text-[#B6975B] hover:bg-[#F5EFE4] transition-colors focus:outline-hidden"
-            aria-label="Toggle Menu"
+            ref={menuToggleRef}
+            type="button"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            className="glass-chip-light lg:hidden inline-flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl text-[#4A101B] hover:text-[#2A0B10] transition-colors cursor-pointer"
+            aria-label={mobileMenuOpen ? (language === 'ar' ? 'إغلاق القائمة' : 'Close menu') : (language === 'ar' ? 'فتح القائمة' : 'Open menu')}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-drawer"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
-
       </div>
 
-      {/* Mobile Drawer (Clean, non-overlapping) */}
+      {/* Frosted Glass Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#FFFDF8] border-b border-[#B6975B]/30 px-6 py-6 space-y-4 shadow-xl">
-          <nav className="flex flex-col gap-2.5 text-sm font-arabic-luxury">
-            {navItems.map((item) => (
+        <div
+          id="mobile-navigation-drawer"
+          className="lg:hidden bg-[#FFFDF8]/90 backdrop-blur-2xl backdrop-saturate-150 border-b border-[#B6975B]/35 px-6 py-5 space-y-4 shadow-2xl max-h-[82vh] overflow-y-auto"
+        >
+          <nav
+            aria-label={language === 'ar' ? 'قائمة الجوال' : 'Mobile Navigation'}
+            className="flex flex-col gap-1.5 text-sm font-arabic-luxury"
+          >
+            {navItems.map((item, idx) => (
               <button
                 key={item.id}
+                ref={idx === 0 ? firstMobileLinkRef : undefined}
+                type="button"
                 onClick={() => handleNavClick(item)}
-                className="text-start py-2 px-3 rounded-lg text-[#2A0B10] hover:bg-[#F5EFE4] hover:text-[#4A101B] font-medium transition-colors"
+                className="text-start min-h-[44px] py-2.5 px-3.5 rounded-xl text-[#2A0B10] hover:bg-[#F5EFE4]/80 hover:text-[#4A101B] font-medium transition-colors cursor-pointer"
               >
                 {language === 'ar' ? item.labelAr : item.labelEn}
               </button>
             ))}
           </nav>
 
-          <div className="pt-4 border-t border-[#B6975B]/20 flex flex-col gap-2.5">
+          <div className="pt-4 border-t border-[#B6975B]/25 flex flex-col gap-2.5">
             <a
               href={BUSINESS_CONFIG.telUrl}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#B6975B]/40 text-[#4A101B] text-xs font-mono"
+              className="glass-chip-light flex items-center justify-center gap-2 min-h-[44px] py-2.5 rounded-xl text-[#4A101B] text-xs font-mono transition-colors"
             >
-              <Phone className="w-4 h-4 text-[#B6975B]" />
+              <Phone className="w-4 h-4 text-[#9c7b3c]" aria-hidden="true" />
               <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="tabular-nums font-semibold">
                 {BUSINESS_CONFIG.phoneDisplay}
               </span>
@@ -193,9 +231,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               href={BUSINESS_CONFIG.getWhatsAppUrl(language, 'general')}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[#4A101B] text-[#FFFDF8] text-xs font-bold"
+              className="flex items-center justify-center gap-2 min-h-[44px] py-3 rounded-xl bg-[#4A101B] hover:bg-[#5e1523] text-[#FFFDF8] text-xs font-bold transition-colors shadow-lg"
             >
-              <MessageCircle className="w-4 h-4 text-[#25D366]" />
+              <MessageCircle className="w-4 h-4 text-[#25D366]" aria-hidden="true" />
               <span>{language === 'ar' ? 'تواصل عبر واتساب' : 'Chat on WhatsApp'}</span>
             </a>
           </div>

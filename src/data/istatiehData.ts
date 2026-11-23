@@ -17,9 +17,9 @@ export const BUSINESS_CONFIG = {
   addressEn: 'Online Store & On-Site Service — Amman, Jordan',
   addressAr: 'متجر وخدمة إلكترونية أونلاين — عمّان، الأردن',
   mapsUrl: 'https://wa.me/962787878601',
-  logoUrl: '/assets/aistudio/istatieh_logo_transparent.png',
-  logoTransparentUrl: '/assets/aistudio/istatieh_logo_transparent.png',
-  logoLightUrl: '/assets/aistudio/istatieh_logo_light.png',
+  logoUrl: '/assets/istatieh-logo-burgundy.png',
+  logoTransparentUrl: '/assets/istatieh-logo-burgundy.png',
+  logoLightUrl: '/assets/istatieh-logo-ivory.png',
   
   // WhatsApp Link Helper with prefilled messages
   getWhatsAppUrl: (lang: 'ar' | 'en', topic?: 'wallpaper' | 'curtains' | 'general') => {

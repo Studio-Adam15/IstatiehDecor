@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useMotionValue, useSpring } from 'motion/react';
 import { Language } from '../types';
 
 interface CustomCursorProps {
@@ -7,45 +7,82 @@ interface CustomCursorProps {
 }
 
 export const CustomCursor: React.FC<CustomCursorProps> = ({ language }) => {
-  const [mousePosition, setMousePosition] = useState({ x: -100, y: -100 });
   const [cursorType, setCursorType] = useState<'default' | 'explore' | 'button'>('default');
   const [isVisible, setIsVisible] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(true);
+  const [isEnabled, setIsEnabled] = useState(false);
+
+  const visibleRef = useRef(false);
+  const typeRef = useRef<'default' | 'explore' | 'button'>('default');
+
+  const rawX = useMotionValue(-100);
+  const rawY = useMotionValue(-100);
+  const x = useSpring(rawX, { damping: 32, stiffness: 420, mass: 0.25 });
+  const y = useSpring(rawY, { damping: 32, stiffness: 420, mass: 0.25 });
 
   useEffect(() => {
-    // Respect touch devices and reduced-motion
-    const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pointerQuery = window.matchMedia('(pointer: fine)');
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    if (!hasFinePointer || prefersReducedMotion) {
-      setIsTouchDevice(true);
-      return;
-    }
-    setIsTouchDevice(false);
-
-    const onMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-      if (!isVisible) setIsVisible(true);
-
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-
-      const exploreEl = target.closest('[data-cursor="explore"]');
-      const buttonEl = target.closest('button, a, input, select, textarea, [data-cursor="pointer"]');
-
-      if (exploreEl) {
-        setCursorType('explore');
-      } else if (buttonEl) {
-        setCursorType('button');
-      } else {
-        setCursorType('default');
+    const syncCapabilities = () => {
+      const enabled = pointerQuery.matches && !motionQuery.matches;
+      setIsEnabled(enabled);
+      if (!enabled) {
+        visibleRef.current = false;
+        setIsVisible(false);
       }
     };
 
-    const onMouseLeave = () => setIsVisible(false);
-    const onMouseEnter = () => setIsVisible(true);
+    syncCapabilities();
+    pointerQuery.addEventListener('change', syncCapabilities);
+    motionQuery.addEventListener('change', syncCapabilities);
 
-    window.addEventListener('mousemove', onMouseMove);
+    return () => {
+      pointerQuery.removeEventListener('change', syncCapabilities);
+      motionQuery.removeEventListener('change', syncCapabilities);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isEnabled) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      let nextType: 'default' | 'explore' | 'button' = 'default';
+
+      if (target) {
+        if (target.closest('[data-cursor="explore"]')) {
+          nextType = 'explore';
+        } else if (target.closest('button, a, input, select, textarea, [data-cursor="pointer"]')) {
+          nextType = 'button';
+        }
+      }
+
+      const halfSize = nextType === 'explore' ? 38 : nextType === 'button' ? 20 : 6;
+      rawX.set(e.clientX - halfSize);
+      rawY.set(e.clientY - halfSize);
+
+      if (!visibleRef.current) {
+        visibleRef.current = true;
+        setIsVisible(true);
+      }
+
+      if (typeRef.current !== nextType) {
+        typeRef.current = nextType;
+        setCursorType(nextType);
+      }
+    };
+
+    const onMouseLeave = () => {
+      visibleRef.current = false;
+      setIsVisible(false);
+    };
+
+    const onMouseEnter = () => {
+      visibleRef.current = true;
+      setIsVisible(true);
+    };
+
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
     document.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('mouseenter', onMouseEnter);
 
@@ -54,16 +91,15 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ language }) => {
       document.removeEventListener('mouseleave', onMouseLeave);
       document.removeEventListener('mouseenter', onMouseEnter);
     };
-  }, [isVisible]);
+  }, [isEnabled, rawX, rawY]);
 
-  if (isTouchDevice || !isVisible) return null;
+  if (!isEnabled || !isVisible) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
       <motion.div
+        style={{ x, y }}
         animate={{
-          x: mousePosition.x - (cursorType === 'explore' ? 38 : cursorType === 'button' ? 20 : 6),
-          y: mousePosition.y - (cursorType === 'explore' ? 38 : cursorType === 'button' ? 20 : 6),
           width: cursorType === 'explore' ? 76 : cursorType === 'button' ? 40 : 12,
           height: cursorType === 'explore' ? 76 : cursorType === 'button' ? 40 : 12,
           backgroundColor:
@@ -72,10 +108,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ language }) => {
               : cursorType === 'button'
               ? 'rgba(74, 16, 27, 0.25)'
               : '#B6975B',
-          borderColor:
-            cursorType === 'button'
-              ? '#B6975B'
-              : 'transparent',
+          borderColor: cursorType === 'button' ? '#B6975B' : 'transparent',
           borderWidth: cursorType === 'button' ? 1.5 : 0,
         }}
         transition={{
@@ -84,13 +117,13 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ language }) => {
           stiffness: 350,
           mass: 0.35,
         }}
-        className="fixed rounded-full flex items-center justify-center backdrop-blur-xs select-none shadow-md"
+        className="fixed top-0 left-0 rounded-full flex items-center justify-center backdrop-blur-xs select-none shadow-md"
       >
         {cursorType === 'explore' && (
           <motion.span
-            initial={{ opacity: 0, scale: 0.7 }}
+            initial={{ opacity: 0, scale: 0.75 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="font-serif-luxury text-[10px] tracking-widest text-[#2A0B10] uppercase font-bold"
+            className="font-serif-luxury text-[10px] tracking-widest rtl:tracking-normal text-[#2A0B10] uppercase font-bold"
           >
             {language === 'ar' ? 'استكشف' : 'EXPLORE'}
           </motion.span>
