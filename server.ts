@@ -45,6 +45,13 @@ async function startServer() {
     next();
   });
 
+  app.get('/google0b376cdc29ee84b8.html', (_req, res) => {
+    const publicFile = path.resolve(__dirname, 'public', 'google0b376cdc29ee84b8.html');
+    const distFile = path.resolve(__dirname, 'dist', 'google0b376cdc29ee84b8.html');
+    const verificationFile = fs.existsSync(publicFile) ? publicFile : distFile;
+    res.status(200).type('text/html; charset=utf-8').sendFile(verificationFile);
+  });
+
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
