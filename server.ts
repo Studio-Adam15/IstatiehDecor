@@ -40,6 +40,11 @@ async function startServer() {
   const app = express();
   app.set('trust proxy', true);
 
+  app.use((_req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+    next();
+  });
+
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
